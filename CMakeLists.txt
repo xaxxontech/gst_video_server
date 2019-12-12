@@ -13,31 +13,14 @@ find_package(catkin REQUIRED COMPONENTS
 ## GStreamer 1.0 package required
 find_package(PkgConfig)
 
-macro(find_gstreamer_component prefix pkg lib)
-  pkg_check_modules(PC_${prefix} REQUIRED ${pkg})
-  find_library(${prefix}_LIBRARIES NAMES ${lib} HINTS ${PC_${prefix}_LIBRARY_DIRS} ${PC_${prefix}_LIBDIR})
-  list(APPEND gstreamer_INCLUDE_DIRS ${PC_${prefix}_INCLUDE_DIRS})
-  list(APPEND gstreamer_LIBRARIES ${${prefix}_LIBRARIES})
-  mark_as_advanced(${prefix}_LIBRARIES gstreamer_LIBRARIES gstreamer_INCLUDE_DIRS)
-endmacro()
 
-find_gstreamer_component(gst      gstreamer-1.0       gstreamer-1.0)
-find_gstreamer_component(gstbase  gstreamer-base-1.0  gstbase-1.0)
-find_gstreamer_component(gstapp   gstreamer-app-1.0   gstapp-1.0)
-find_gstreamer_component(gstvideo gstreamer-video-1.0 gstvideo-1.0)
+pkg_check_modules(gst gstreamer-1.0)
+pkg_check_modules(gstbase gstreamer-base-1.0)
+pkg_check_modules(gstapp gstreamer-app-1.0)
 
-#message(STATUS "inc: ${gstreamer_INCLUDE_DIRS}")
-#message(STATUS "lib: ${gstreamer_LIBRARIES}")
 
-# C++11 required!
-include(CheckCXXCompilerFlag)
-
-check_cxx_compiler_flag("-std=c++11" COMPILER_SUPPORTS_STD_CXX11)
-if (COMPILER_SUPPORTS_STD_CXX11)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-else ()
-  message(FATAL_ERROR "The compiler ${CMAKE_CXX_COMPILER} has no C++11 support. Please use a different C++ compiler.")
-endif ()
+message(STATUS "GST-VIDEO-SERVER inc: ${gstreamer_INCLUDE_DIRS}")
+message(STATUS "GST-VIDEO-SERVER lib: ${gstreamer_LIBRARIES}")
 
 
 ###################################
@@ -51,9 +34,9 @@ endif ()
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-  LIBRARIES gstvideoserver
-  CATKIN_DEPENDS nodelet image_transport roscpp sensor_msgs std_msgs
-  DEPENDS libgstreamer1.0-dev
+  # LIBRARIES gstvideoserver
+  # CATKIN_DEPENDS nodelet image_transport roscpp sensor_msgs std_msgs
+  # DEPENDS libgstreamer1.0-dev
 )
 
 ###########
@@ -62,7 +45,17 @@ catkin_package(
 
 include_directories(
   ${catkin_INCLUDE_DIRS}
-  ${gstreamer_INCLUDE_DIRS}
+  ${catkin_INCLUDE_DIRS}
+  ${gst_INCLUDE_DIRS}
+  ${gstapp_INCLUDE_DIRS}
+  ${gstbase_INCLUDE_DIRS}
+)
+
+# added new
+link_directories(
+	${gstbase_LIBRARY_DIRS}
+	${gstapp_LIBRARY_DIRS}
+	${gst_LIBRARY_DIRS}
 )
 
 add_library(gstvideoserver
@@ -70,14 +63,19 @@ add_library(gstvideoserver
 )
 target_link_libraries(gstvideoserver
    ${catkin_LIBRARIES}
-   ${gstreamer_LIBRARIES}
+	${gstapp_LIBRARIES}
+	${gstbase_LIBRARIES}
+	${gst_LIBRARIES}
 )
 
 add_executable(server_node
   src/node.cpp
 )
 target_link_libraries(server_node
-  ${catkin_LIBRARIES}
+   ${catkin_LIBRARIES}
+	${gstapp_LIBRARIES}
+	${gstbase_LIBRARIES}
+	${gst_LIBRARIES}
 )
 
 #############
